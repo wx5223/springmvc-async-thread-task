@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.0.xsd">
+
+    <!--<bean class="com.linkage.educloudapiapi.core.StringHttpMessageConverterUseUTF8BeanPostProcessor"/>-->
+                
+    <context:component-scan base-package="com.wx" use-default-filters="false">
+        <context:include-filter expression="org.springframework.stereotype.Controller" type="annotation"/>
+        <context:include-filter expression="org.springframework.web.bind.annotation.ControllerAdvice" type="annotation"/>
+    </context:component-scan>
+
+    <!-- thread pool -->
+    <bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+        <property name="corePoolSize" value="10" />
+        <property name="maxPoolSize" value="50" />
+        <property name="queueCapacity" value="500" />
+        <!-- 线程池维护线程所允许的空闲时间 -->
+        <property name="keepAliveSeconds" value="30" />
+        <!-- 线程池对拒绝任务(无线程可用)的处理策略 -->
+        <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" />
+        </property>
+    </bean>
+
+    <!-- alter the default thread pool -->
+    <mvc:annotation-driven>
+        <mvc:async-support default-timeout="3000" task-executor="taskExecutor">
+            <mvc:callable-interceptors>
+                <bean class="com.wx.interceptors.TimeoutCallableProcessingInterceptor" />
+            </mvc:callable-interceptors>
+        </mvc:async-support>
+    </mvc:annotation-driven>
+
+    <mvc:resources location="/resources/" mapping="/resources/**"/>
+
+    <mvc:default-servlet-handler/>
+
+    <mvc:interceptors>
+        <bean class="com.wx.interceptors.CommonInterceptor"/>
+        <!--<bean class="org.springframework.web.servlet.theme.ThemeChangeInterceptor"/>-->
+        <!--<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor" p:paramName="lang"/>-->
+    </mvc:interceptors>
+
+    <!--<mvc:view-controller path="/" view-name="index"/>-->
+    <mvc:view-controller path="/uncaughtException" view-name="/publics/errors/uncaughtException"/>
+    <mvc:view-controller path="/resourceNotFound" view-name="/publics/errors/resourceNotFound"/>
+    <mvc:view-controller path="/dataAccessFailure" view-name="/publics/errors/dataAccessFailure"/>
+    <mvc:view-controller path="/accessDenied" view-name="/publics/errors/accessDenied"/>
+
+    <bean class="org.springframework.context.support.ReloadableResourceBundleMessageSource" id="messageSource" p:basenames="WEB-INF/i18n/messages,WEB-INF/i18n/application" p:fallbackToSystemLocale="false"/>
+
+    <!-- Store preferred language configuration in a cookie -->
+    <bean class="org.springframework.web.servlet.i18n.CookieLocaleResolver" id="localeResolver" p:cookieName="locale"/>
+    <!-- Resolves localized <theme_name>.properties files in the classpath to allow for theme support -->
+    <bean class="org.springframework.ui.context.support.ResourceBundleThemeSource" id="themeSource"/>
+    <!-- Store preferred theme configuration in a cookie -->
+    <bean class="org.springframework.web.servlet.theme.CookieThemeResolver" id="themeResolver" p:cookieName="theme" p:defaultThemeName="standard"/>
+
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver" p:defaultErrorView="uncaughtException">
+        <property name="exceptionMappings">
+            <props>
+                <prop key=".DataAccessException">/publics/errors/dataAccessFailure</prop>
+                <prop key=".NoSuchRequestHandlingMethodException">/publics/errors/resourceNotFound</prop>
+                <prop key=".TypeMismatchException">/publics/errors/resourceNotFound</prop>
+                <prop key=".MissingServletRequestParameterException">/publics/errors/resourceNotFound</prop>
+            </props>
+        </property>
+    </bean>
+    <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+        <property name="supportedMediaTypes" value = "text/plain;charset=UTF-8" />
+    </bean>
+
+    <bean class="org.springframework.web.multipart.commons.CommonsMultipartResolver" id="multipartResolver"/>
+
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="jspViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value=""/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+</beans>
